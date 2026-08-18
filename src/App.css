@@ -399,15 +399,16 @@ button:focus-visible {
 }
 
 .google-icon {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
 }
 
 .login-card {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 18px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  gap: 6px;
 }
 
 .login-card.on {
@@ -415,23 +416,18 @@ button:focus-visible {
 }
 
 .login-card h2 {
-  margin: 0 0 8px;
-  font-size: 1.15rem;
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.login-card .hint {
+  font-size: 0.82rem;
 }
 
 .login-card .google {
-  margin: 8px 0 0;
-}
-
-.benefit-list {
-  margin: 0;
-  padding-left: 1.15rem;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.benefit-list li + li {
-  margin-top: 4px;
+  margin: 2px 0 0;
+  min-height: 44px;
+  font-weight: 700;
 }
 
 .user-row {

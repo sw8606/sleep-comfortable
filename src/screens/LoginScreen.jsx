@@ -2,16 +2,11 @@ export default function LoginScreen({ onGoogle, loading, error, onSkip, compact,
   const body = (
     <>
       {!compact && <p className="eyebrow">편히자</p>}
-      {highlight && <p className="hint">학교·직장·집을 저장하려면 로그인이 필요해요.</p>}
-      <h2>로그인하면 다음에 더 편해요</h2>
-      <ul className="benefit-list">
-        <li>전에 내린 정류장이 사이드바에 남아요</li>
-        <li>같은 곳으로 갈 때 바로 다시 고를 수 있어요</li>
-        <li>학교·직장·집도 저장해 두고 한 번에 시작할 수 있어요</li>
-      </ul>
-      <p className="hint">지금은 로그인 없이 바로 써도 됩니다.</p>
+      {highlight && <p className="hint">저장하려면 로그인이 필요해요.</p>}
+      <h2>로그인하면 자주 가는 곳이 남아요</h2>
+      <p className="hint">안 해도 바로 쓸 수 있어요.</p>
       {error && <p className="error">{error}</p>}
-      <button type="button" className="google big" onClick={onGoogle} disabled={loading}>
+      <button type="button" className="google" onClick={onGoogle} disabled={loading}>
         <GoogleMark />
         {loading ? '로그인 중…' : 'Google로 로그인'}
       </button>

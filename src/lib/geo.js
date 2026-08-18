@@ -18,6 +18,8 @@ export function formatDistance(meters) {
 }
 
 export const BUS_GAP_M = 400
+export const TRUSTED_ACCURACY_M = 120
+export const USABLE_ACCURACY_M = 400
 
 export function estimateBusHops(from, to) {
   const meters = distanceMeters(from, to)
@@ -28,22 +30,41 @@ export function estimateBusHops(from, to) {
 let lastFix = null
 
 export function getLastFix() {
+  if (!lastFix) return null
+  if (Date.now() - lastFix.at > 45 * 1000) return null
+  if (lastFix.accuracy > USABLE_ACCURACY_M) return null
   return lastFix
 }
 
 function rememberFix(coords) {
-  lastFix = { lat: coords.latitude, lng: coords.longitude }
+  const next = {
+    lat: coords.latitude,
+    lng: coords.longitude,
+    accuracy: Number.isFinite(coords.accuracy) ? coords.accuracy : 99999,
+    at: Date.now(),
+  }
+
+  if (
+    lastFix &&
+    Date.now() - lastFix.at < 30 * 1000 &&
+    next.accuracy > lastFix.accuracy * 1.8 &&
+    next.accuracy > TRUSTED_ACCURACY_M
+  ) {
+    return lastFix
+  }
+
+  lastFix = next
+  return lastFix
 }
 
-const QUICK = { enableHighAccuracy: false, maximumAge: 120000, timeout: 2500 }
-const FINE = { enableHighAccuracy: true, maximumAge: 8000, timeout: 20000 }
+const FINE = { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
 
 export function warmLocation() {
   if (!navigator.geolocation) return
   navigator.geolocation.getCurrentPosition(
     (pos) => rememberFix(pos.coords),
     () => {},
-    QUICK,
+    FINE,
   )
 }
 
@@ -54,20 +75,24 @@ export function watchHere(onChange, onError) {
   }
 
   const apply = (pos) => {
-    rememberFix(pos.coords)
-    onChange({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+    const fix = rememberFix(pos.coords)
+    onChange(fix)
   }
 
-  if (lastFix) onChange(lastFix)
+  const cached = getLastFix()
+  if (cached) onChange(cached)
 
-  navigator.geolocation.getCurrentPosition(apply, () => {}, QUICK)
+  navigator.geolocation.getCurrentPosition(apply, () => {}, FINE)
   const watchId = navigator.geolocation.watchPosition(
     apply,
     () => {
-      if (!lastFix) onError?.('GPS를 기다리는 중. 탭은 켠 채로 두세요.')
+      if (!getLastFix()) onError?.('GPS를 기다리는 중. 휴대폰에서 위치 권한을 허용해 주세요.')
     },
     FINE,
   )
   return () => navigator.geolocation.clearWatch(watchId)
 }
 
+export function isFixUsable(here) {
+  return here && Number.isFinite(here.accuracy) && here.accuracy <= USABLE_ACCURACY_M
+}

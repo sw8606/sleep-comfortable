@@ -1,4 +1,7 @@
+import { distanceMeters } from '../lib/geo'
 import lines from './seoulSubwayLines.json'
+
+export const SUBWAY_WAKE_NEAR_M = 600
 
 export const SUBWAY_LINES = lines
 
@@ -63,4 +66,15 @@ export function remainingStops(line, fromName, toName) {
     return Math.min(forward, backward)
   }
   return Math.abs(j - i)
+}
+
+export function isNearSubwayWakeStation(line, destName, here, before) {
+  if (!line || !here || !destName) return false
+  for (const station of line.stations) {
+    if (station.lat == null || station.lng == null) continue
+    const hops = station.name === destName ? 0 : remainingStops(line, station.name, destName)
+    if (hops == null || hops > before) continue
+    if (distanceMeters(here, station) <= SUBWAY_WAKE_NEAR_M) return true
+  }
+  return false
 }

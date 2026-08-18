@@ -2,13 +2,100 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <title>편히자 | 버스·지하철 내릴 곳 전에 깨워 주는 앱</title>
+    <meta
+      name="description"
+      content="버스·지하철에서 졸아도 내릴 정류장·역 전에 깨워 드려요. 노선번호로 찾고, 몇 정거장 전에 소리와 진동으로 알려 줍니다."
+    />
+    <meta
+      name="keywords"
+      content="편히자, 하차 알림, 버스 알람, 지하철 알람, 내릴 곳, 정류장 알림, 통학, 출근, 졸음"
+    />
+    <meta name="author" content="편히자" />
+    <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
     <meta name="theme-color" content="#f6f6f6" />
-    <title>편히자</title>
+    <meta name="color-scheme" content="light" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="application-name" content="편히자" />
+    <meta name="apple-mobile-web-app-title" content="편히자" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <link rel="canonical" href="https://sleep-comfortable.vercel.app/" />
+    <link rel="alternate" hreflang="ko" href="https://sleep-comfortable.vercel.app/" />
+    <link rel="alternate" hreflang="x-default" href="https://sleep-comfortable.vercel.app/" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:site_name" content="편히자" />
+    <meta property="og:url" content="https://sleep-comfortable.vercel.app/" />
+    <meta property="og:title" content="편히자 | 버스·지하철 내릴 곳 전에 깨워 주는 앱" />
+    <meta
+      property="og:description"
+      content="버스·지하철에서 졸아도 내릴 정류장·역 전에 깨워 드려요. 노선번호로 찾고, 몇 정거장 전에 알려 줍니다."
+    />
+    <meta property="og:image" content="https://sleep-comfortable.vercel.app/og.png" />
+    <meta property="og:image:alt" content="편히자" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="편히자 | 버스·지하철 내릴 곳 전에 깨워 주는 앱" />
+    <meta
+      name="twitter:description"
+      content="버스·지하철에서 졸아도 내릴 정류장·역 전에 깨워 드려요."
+    />
+    <meta name="twitter:image" content="https://sleep-comfortable.vercel.app/og.png" />
+    <meta name="twitter:image:alt" content="편히자" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "편히자",
+        "alternateName": "sleep-comfortable",
+        "url": "https://sleep-comfortable.vercel.app/",
+        "description": "버스·지하철에서 졸아도 내릴 정류장·역 전에 깨워 주는 웹 앱",
+        "applicationCategory": "TravelApplication",
+        "operatingSystem": "Web",
+        "inLanguage": "ko-KR",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "KRW"
+        },
+        "image": "https://sleep-comfortable.vercel.app/og.png",
+        "screenshot": "https://sleep-comfortable.vercel.app/og.png"
+      }
+    </script>
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-RH5EFX15XC"></script>
+    <script>
+      window.dataLayer = window.dataLayer || []
+      function gtag() {
+        dataLayer.push(arguments)
+      }
+      gtag('js', new Date())
+      gtag('config', 'G-RH5EFX15XC', { anonymize_ip: true, send_page_view: false })
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>편히자는 버스·지하철에서 졸아도 내릴 정류장·역 전에 깨워 주는 웹 앱입니다. JavaScript를 켜 주세요.</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -6,6 +6,7 @@ import { createAlarm } from './lib/alarm.js'
 import { googleErrorMessage, signInWithGoogle, signOutUser, watchUser } from './lib/auth.js'
 import { deletePlace, listPlaces, savePlace } from './lib/places.js'
 import { deleteHistory, listHistory, saveHistory } from './lib/history.js'
+import { trackEvent, trackScreen } from './lib/analytics.js'
 import './App.css'
 
 export default function App() {
@@ -44,12 +45,17 @@ export default function App() {
   }, [user])
 
   useEffect(() => {
+    trackScreen(screen)
+  }, [screen])
+
+  useEffect(() => {
     if (!user || !pendingSave) return
     let cancelled = false
     savePlace(user.uid, pendingSave)
       .then((list) => {
         if (!cancelled) {
           setPlaces(list)
+          trackEvent('save_place', { place_name: pendingSave.name, mode: pendingSave.mode })
           setPendingSave(null)
         }
       })
@@ -66,6 +72,7 @@ export default function App() {
     setAuthError('')
     try {
       await signInWithGoogle()
+      trackEvent('login', { method: 'Google' })
     } catch (error) {
       setAuthError(googleErrorMessage(error))
     } finally {
@@ -76,6 +83,10 @@ export default function App() {
   async function start(next) {
     setDestination(next)
     setScreen('watch')
+    trackEvent('start_watch', {
+      mode: next.mode,
+      wake_before: next.wakeBefore || 1,
+    })
     if (!user) return
     try {
       setHistory(await saveHistory(user.uid, next))
@@ -97,6 +108,7 @@ export default function App() {
       return
     }
     setPlaces(await savePlace(user.uid, place))
+    trackEvent('save_place', { place_name: place.name, mode: place.mode })
   }
 
   async function onRemove(name) {
@@ -131,7 +143,10 @@ export default function App() {
           onSave={onSave}
           onRemove={onRemove}
           onRemoveHistory={onRemoveHistory}
-          onLogout={signOutUser}
+          onLogout={() => {
+            trackEvent('logout')
+            signOutUser()
+          }}
           onGoogle={onGoogle}
           onAskLogin={() => setNeedLogin(true)}
           onSkipLogin={() => {
@@ -145,7 +160,10 @@ export default function App() {
           destination={destination}
           alarm={alarm}
           onStop={stop}
-          onWake={() => setScreen('wake')}
+          onWake={() => {
+            trackEvent('alarm_wake', { mode: destination.mode })
+            setScreen('wake')
+          }}
         />
       )}
       {screen === 'wake' && destination && (

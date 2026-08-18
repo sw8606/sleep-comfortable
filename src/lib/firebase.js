@@ -9,6 +9,7 @@ const firebaseConfig = {
   storageBucket: 'sleep-comfor.firebasestorage.app',
   messagingSenderId: '860091678943',
   appId: '1:860091678943:web:a287fd754983ee7d3d696a',
+  measurementId: 'G-RH5EFX15XC',
 }
 
 const app = initializeApp(firebaseConfig)

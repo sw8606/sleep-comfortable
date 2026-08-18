@@ -1,0 +1,24 @@
+{
+  "name": "편히자",
+  "short_name": "편히자",
+  "description": "버스·지하철에서 졸아도 내릴 정류장·역 전에 깨워 주는 웹 앱",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f6f6",
+  "theme_color": "#f6f6f6",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

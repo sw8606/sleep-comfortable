@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sleep-comfortable.vercel.app/sitemap.xml

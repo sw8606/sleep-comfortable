@@ -24,3 +24,50 @@ export function estimateBusHops(from, to) {
   if (meters < 120) return 0
   return Math.max(1, Math.round(meters / BUS_GAP_M))
 }
+
+let lastFix = null
+
+export function getLastFix() {
+  return lastFix
+}
+
+function rememberFix(coords) {
+  lastFix = { lat: coords.latitude, lng: coords.longitude }
+}
+
+const QUICK = { enableHighAccuracy: false, maximumAge: 120000, timeout: 2500 }
+const FINE = { enableHighAccuracy: true, maximumAge: 8000, timeout: 20000 }
+
+export function warmLocation() {
+  if (!navigator.geolocation) return
+  navigator.geolocation.getCurrentPosition(
+    (pos) => rememberFix(pos.coords),
+    () => {},
+    QUICK,
+  )
+}
+
+export function watchHere(onChange, onError) {
+  if (!navigator.geolocation) {
+    onError?.('이 기기는 위치를 쓸 수 없습니다.')
+    return () => {}
+  }
+
+  const apply = (pos) => {
+    rememberFix(pos.coords)
+    onChange({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+  }
+
+  if (lastFix) onChange(lastFix)
+
+  navigator.geolocation.getCurrentPosition(apply, () => {}, QUICK)
+  const watchId = navigator.geolocation.watchPosition(
+    apply,
+    () => {
+      if (!lastFix) onError?.('GPS를 기다리는 중. 탭은 켠 채로 두세요.')
+    },
+    FINE,
+  )
+  return () => navigator.geolocation.clearWatch(watchId)
+}
+

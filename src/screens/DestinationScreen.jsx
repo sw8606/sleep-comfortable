@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { listLines, listStationsOnLine, searchStations } from '../data/seoulSubway'
 import { getBusRoute, listStopsOnRoute, searchBusRoutes } from '../lib/busRoutes'
+import { warmLocation } from '../lib/geo'
 import HistorySidebar from './HistorySidebar.jsx'
 import LoginScreen from './LoginScreen.jsx'
 
@@ -37,6 +38,14 @@ export default function DestinationScreen({
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [toast, setToast] = useState('')
   const loginCardRef = useRef(null)
+
+  useEffect(() => {
+    warmLocation()
+  }, [])
+
+  useEffect(() => {
+    if (busDest || dest) warmLocation()
+  }, [busDest, dest])
 
   useEffect(() => {
     if (!toast) return

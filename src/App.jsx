@@ -7,6 +7,7 @@ import { googleErrorMessage, signInWithGoogle, signOutUser, watchUser } from './
 import { deletePlace, listPlaces, savePlace } from './lib/places.js'
 import { deleteHistory, listHistory, saveHistory } from './lib/history.js'
 import { trackEvent, trackScreen } from './lib/analytics.js'
+import { warmLocation } from './lib/geo.js'
 import './App.css'
 
 export default function App() {
@@ -81,6 +82,7 @@ export default function App() {
   }
 
   async function start(next) {
+    warmLocation()
     setDestination(next)
     setScreen('watch')
     trackEvent('start_watch', {

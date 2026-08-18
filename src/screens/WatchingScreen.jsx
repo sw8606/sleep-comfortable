@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { hopsLeftOnRoute } from '../lib/busRoutes'
 import { getLine, remainingStops } from '../data/seoulSubway'
-import { BUS_GAP_M, distanceMeters, formatDistance } from '../lib/geo'
+import { BUS_GAP_M, distanceMeters, formatDistance, getLastFix, watchHere } from '../lib/geo'
 
 export default function WatchingScreen({ destination, alarm, onStop, onWake }) {
-  const [here, setHere] = useState(null)
+  const [here, setHere] = useState(() => getLastFix())
   const [geoError, setGeoError] = useState('')
   const [startedAt] = useState(() => Date.now())
   const [now, setNow] = useState(Date.now())
@@ -14,17 +14,16 @@ export default function WatchingScreen({ destination, alarm, onStop, onWake }) {
   useEffect(() => {
     alarm.unlock()
     const tick = setInterval(() => setNow(Date.now()), 1000)
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        setHere({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+    const stopWatch = watchHere(
+      (next) => {
+        setHere(next)
         setGeoError('')
       },
-      () => setGeoError('GPS를 기다리는 중. 탭은 켠 채로 두세요.'),
-      { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 },
+      (message) => setGeoError(message),
     )
     return () => {
       clearInterval(tick)
-      navigator.geolocation.clearWatch(watchId)
+      stopWatch()
     }
   }, [alarm])
 

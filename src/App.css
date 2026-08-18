@@ -114,11 +114,16 @@ button {
   line-height: 1.5;
 }
 
-.block h2 {
+.block h2,
+.search label {
   margin: 0 0 8px;
-  font-size: 0.92rem;
-  font-weight: 500;
-  color: var(--muted);
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.search label {
+  margin: 0;
 }
 
 .tabs {

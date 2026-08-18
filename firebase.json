@@ -1,0 +1,17 @@
+{
+  "auth": {
+    "providers": {
+      "anonymous": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "편히자",
+        "supportEmail": "sw8606@gmail.com",
+        "authorizedRedirectUris": ["http://localhost"]
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json",
+    "location": "asia-northeast3"
+  }
+}

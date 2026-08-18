@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { hopsLeftOnRoute } from '../lib/busRoutes'
+import { isNearBusWakeStop } from '../lib/busRoutes'
 import { getLine, isNearSubwayWakeStation } from '../data/seoulSubway'
 import {
-  BUS_GAP_M,
   distanceMeters,
   formatDistance,
   getLastFix,
@@ -42,10 +41,10 @@ export default function WatchingScreen({ destination, alarm, onStop, onWake }) {
       ? distanceMeters(here, { lat: destination.lat, lng: destination.lng })
       : null
 
-  const hopsLeft =
+  const nearBusWake =
     !subway && gpsOk && destination.routeId && destination.destId != null
-      ? hopsLeftOnRoute(destination.routeId, destination.destId, here)
-      : null
+      ? isNearBusWakeStop(destination.routeId, destination.destId, here, before)
+      : false
 
   const nearSubwayWake =
     subway && gpsOk && destination.lineId
@@ -55,14 +54,11 @@ export default function WatchingScreen({ destination, alarm, onStop, onWake }) {
   useEffect(() => {
     if (woke.current || !gpsOk) return
     const ready = now - startedAt >= 20 * 1000
-    const bySubway = subway && nearSubwayWake && ready
-    const byStops = !subway && hopsLeft != null && hopsLeft <= before && ready
-    const byGps = !subway && meters != null && meters <= BUS_GAP_M * before
-    if (bySubway || byStops || byGps) {
+    if ((subway ? nearSubwayWake : nearBusWake) && ready) {
       woke.current = true
       onWake()
     }
-  }, [meters, hopsLeft, nearSubwayWake, subway, now, startedAt, onWake, before, gpsOk])
+  }, [nearBusWake, nearSubwayWake, subway, now, startedAt, onWake, gpsOk])
 
   const lastMeters = useRef(null)
   if (gpsOk && meters != null) lastMeters.current = meters

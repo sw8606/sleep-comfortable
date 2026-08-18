@@ -1,7 +1,7 @@
 import { distanceMeters } from '../lib/geo'
 import lines from './seoulSubwayLines.json'
 
-export const SUBWAY_WAKE_NEAR_M = 600
+export const SUBWAY_WAKE_NEAR_M = 200
 
 export const SUBWAY_LINES = lines
 

@@ -9,7 +9,7 @@ const SCREEN_PATH = {
 const SCREEN_TITLE = {
   home: '편히자 | 버스·지하철 내릴 곳 전에 깨워 주는 앱',
   watch: '감시 중 | 편히자',
-  wake: '내릴 곳이에요 | 편히자',
+  wake: '이제 곧 내릴 곳입니다 | 편히자',
 }
 
 function canTrack() {

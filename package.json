@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "data:bus": "node scripts/build-bus-stops.mjs && node scripts/build-bus-routes.mjs",
+    "data:subway": "node scripts/build-subway.mjs",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"

@@ -44,6 +44,7 @@ export default function WatchingScreen({ destination, alarm, onStop, onWake }) {
         let nearest = null
         let nearestMeters = Infinity
         for (const station of line.stations) {
+          if (station.lat == null || station.lng == null) continue
           const d = distanceMeters(here, station)
           if (d < nearestMeters) {
             nearestMeters = d

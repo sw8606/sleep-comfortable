@@ -1,16 +1,37 @@
-export default function LoginScreen({ onGoogle, loading, error }) {
-  return (
-    <main className="screen login">
-      <p className="eyebrow">편히자</p>
-      <h1>편히 자도 내릴 곳은 챙길게요</h1>
-      <p className="lead">Google 계정으로 들어오면 학교·집을 저장해 두고 쓸 수 있습니다.</p>
+export default function LoginScreen({ onGoogle, loading, error, onSkip, compact, highlight }) {
+  const body = (
+    <>
+      {!compact && <p className="eyebrow">편히자</p>}
+      {highlight && <p className="hint">학교·직장·집을 저장하려면 로그인이 필요해요.</p>}
+      <h2>로그인하면 다음에 더 편해요</h2>
+      <ul className="benefit-list">
+        <li>전에 내린 정류장이 사이드바에 남아요</li>
+        <li>같은 곳으로 갈 때 바로 다시 고를 수 있어요</li>
+        <li>학교·직장·집도 저장해 두고 한 번에 시작할 수 있어요</li>
+      </ul>
+      <p className="hint">지금은 로그인 없이 바로 써도 됩니다.</p>
       {error && <p className="error">{error}</p>}
       <button type="button" className="google big" onClick={onGoogle} disabled={loading}>
         <GoogleMark />
-        {loading ? '로그인 중…' : 'Google로 계속하기'}
+        {loading ? '로그인 중…' : 'Google로 로그인'}
       </button>
-    </main>
+      {onSkip && (
+        <button type="button" className="ghost" onClick={onSkip}>
+          나중에 할래요
+        </button>
+      )}
+    </>
   )
+
+  if (compact) {
+    return (
+      <section className={highlight ? 'block login-card on' : 'block login-card'}>
+        {body}
+      </section>
+    )
+  }
+
+  return <main className="screen login">{body}</main>
 }
 
 function GoogleMark() {

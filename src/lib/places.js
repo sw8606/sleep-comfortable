@@ -19,13 +19,17 @@ function toDoc(place, uid) {
     label: place.label,
     lat: place.lat,
     lng: place.lng,
+    destName: place.destName || place.name,
+    wakeBefore: place.wakeBefore || 1,
   }
   if (place.mode === 'subway') {
     data.lineId = place.lineId
     data.lineName = place.lineName
-    data.boardName = place.boardName
-    data.destName = place.destName
-    data.hops = place.hops
+  }
+  if (place.mode === 'bus') {
+    if (place.destId != null) data.destId = Number(place.destId)
+    if (place.routeId) data.routeId = String(place.routeId)
+    if (place.routeName) data.routeName = String(place.routeName).slice(0, 40)
   }
   return data
 }

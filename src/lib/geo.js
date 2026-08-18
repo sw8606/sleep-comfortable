@@ -16,3 +16,11 @@ export function formatDistance(meters) {
   if (meters < 1000) return `${Math.round(meters)}m`
   return `${(meters / 1000).toFixed(1)}km`
 }
+
+export const BUS_GAP_M = 400
+
+export function estimateBusHops(from, to) {
+  const meters = distanceMeters(from, to)
+  if (meters < 120) return 0
+  return Math.max(1, Math.round(meters / BUS_GAP_M))
+}

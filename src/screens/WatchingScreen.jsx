@@ -1,16 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { distanceMeters, formatDistance } from '../lib/geo'
-
-const BUS_WAKE_M = 250
-const SUBWAY_WAKE_M = 400
-const STATION_MS = 2 * 60 * 1000
+import { hopsLeftOnRoute } from '../lib/busRoutes'
+import { getLine, remainingStops } from '../data/seoulSubway'
+import { BUS_GAP_M, distanceMeters, formatDistance } from '../lib/geo'
 
 export default function WatchingScreen({ destination, alarm, onStop, onWake }) {
-  const [now, setNow] = useState(Date.now())
   const [here, setHere] = useState(null)
   const [geoError, setGeoError] = useState('')
   const [startedAt] = useState(() => Date.now())
+  const [now, setNow] = useState(Date.now())
   const woke = useRef(false)
+  const before = destination.wakeBefore || 1
 
   useEffect(() => {
     alarm.unlock()
@@ -35,50 +34,53 @@ export default function WatchingScreen({ destination, alarm, onStop, onWake }) {
       : null
 
   const hopsLeft = (() => {
-    if (destination.mode !== 'subway') return null
-    const elapsed = now - startedAt
-    if (destination.hops === 1) {
-      return elapsed >= 60 * 1000 ? 0 : 1
+    if (destination.mode === 'bus' && here && destination.routeId && destination.destId != null) {
+      const left = hopsLeftOnRoute(destination.routeId, destination.destId, here)
+      if (left != null) return left
     }
-    const passed = Math.floor(elapsed / STATION_MS)
-    return Math.max(0, destination.hops - passed)
+    if (destination.mode === 'subway' && here && destination.lineId) {
+      const line = getLine(destination.lineId)
+      if (line) {
+        let nearest = null
+        let nearestMeters = Infinity
+        for (const station of line.stations) {
+          const d = distanceMeters(here, station)
+          if (d < nearestMeters) {
+            nearestMeters = d
+            nearest = station
+          }
+        }
+        if (nearest && nearestMeters <= 800) {
+          if (nearest.name === destination.destName || nearest.name === destination.name) return 0
+          return remainingStops(line, nearest.name, destination.destName || destination.name) ?? 0
+        }
+      }
+    }
+    if (meters == null) return null
+    return Math.max(0, Math.round(meters / BUS_GAP_M))
   })()
 
   useEffect(() => {
     if (woke.current) return
-    if (destination.mode === 'bus' && meters != null && meters <= BUS_WAKE_M) {
+    const ready = now - startedAt >= 20 * 1000
+    const byStops = hopsLeft != null && hopsLeft <= before && ready
+    const byGps = meters != null && meters <= BUS_GAP_M * before
+    if (byGps || byStops) {
       woke.current = true
       onWake()
-      return
     }
-    if (destination.mode === 'subway') {
-      const byGps = meters != null && meters <= SUBWAY_WAKE_M
-      const byStops = hopsLeft != null && hopsLeft <= 1 && now - startedAt >= 30 * 1000
-      if (byGps || byStops) {
-        woke.current = true
-        onWake()
-      }
-    }
-  }, [destination, meters, hopsLeft, now, startedAt, onWake])
+  }, [meters, hopsLeft, now, startedAt, onWake, before])
 
   return (
     <main className="screen watching">
-      <p className="eyebrow">감시 중</p>
+      <p className="brand brand-sm">편히자</p>
+      <p className="eyebrow">감시 중 · {before}정거장 전</p>
       <h1>{destination.mode === 'bus' ? '버스' : '지하철'}</h1>
-      <p className="place">{destination.label}</p>
+      <p className="place">{destination.label || destination.destName || destination.name}</p>
 
       <div className="stat">
-        {destination.mode === 'bus' ? (
-          <>
-            <strong>{formatDistance(meters)}</strong>
-            <span>내릴 곳까지</span>
-          </>
-        ) : (
-          <>
-            <strong>{hopsLeft ?? '—'}정거장</strong>
-            <span>남음 · GPS {formatDistance(meters)}</span>
-          </>
-        )}
+        <strong>{hopsLeft ?? '—'}정거장</strong>
+        <span>남음 · GPS {formatDistance(meters)}</span>
       </div>
 
       <p className="hint">화면을 켠 채로 두세요. 가까이 오면 소리와 진동으로 깨웁니다.</p>

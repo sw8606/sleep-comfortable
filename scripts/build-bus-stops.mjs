@@ -32,6 +32,7 @@ const seoulRaw = JSON.parse(fs.readFileSync('서울시 버스정류소 위치정
 const seoul = seoulRaw.DATA.map((d) => {
   const prefix = String(d.node_id || '').padStart(5, '0').slice(0, 2)
   return {
+    id: Number(d.stops_no),
     name: d.stops_nm,
     lat: Number(d.ycrd),
     lng: Number(d.xcrd),
@@ -39,7 +40,7 @@ const seoul = seoulRaw.DATA.map((d) => {
     district: GU[prefix] || '기타',
     dong: '전체',
   }
-}).filter((s) => s.name && Number.isFinite(s.lat) && Number.isFinite(s.lng))
+}).filter((s) => s.name && Number.isFinite(s.id) && Number.isFinite(s.lat) && Number.isFinite(s.lng))
 fs.writeFileSync('src/data/seoulBusStops.json', JSON.stringify(seoul))
 console.log('seoul', seoul.length)
 
@@ -68,6 +69,7 @@ const gyeonggi = gRaw
   .map((d) => {
     const { district, dong } = parseGyeonggi(d.locplc_loc, d.sigun_nm)
     return {
+      id: Number(d.sttn_id),
       name: d.sttn_nm_info,
       lat: Number(d.wgs84_lat),
       lng: Number(d.wgs84_logt),
@@ -76,7 +78,7 @@ const gyeonggi = gRaw
       dong,
     }
   })
-  .filter((s) => s.name && Number.isFinite(s.lat) && Number.isFinite(s.lng))
+  .filter((s) => s.name && Number.isFinite(s.id) && Number.isFinite(s.lat) && Number.isFinite(s.lng))
 fs.writeFileSync('src/data/gyeonggiBusStops.json', JSON.stringify(gyeonggi))
 console.log('gyeonggi', gyeonggi.length)
 console.log(gyeonggi.find((s) => s.name.includes('수원역')))

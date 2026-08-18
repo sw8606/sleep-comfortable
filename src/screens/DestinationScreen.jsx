@@ -1,147 +1,103 @@
-import { useEffect, useMemo, useState } from 'react'
-import { getLine, remainingStops, searchStations } from '../data/seoulSubway'
-import {
-  listDistricts,
-  listDongs,
-  listRegions,
-  listStopsByArea,
-  nearbyBusStops,
-  searchBusStops,
-} from '../lib/searchStops'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { listLines, listStationsOnLine, searchStations } from '../data/seoulSubway'
+import { getBusRoute, listStopsOnRoute, searchBusRoutes } from '../lib/busRoutes'
+import HistorySidebar from './HistorySidebar.jsx'
+import LoginScreen from './LoginScreen.jsx'
+
+const WAKE_CHOICES = [1, 2, 3, 4, 5]
 
 export default function DestinationScreen({
   user,
   places,
+  history = [],
+  needLogin,
+  signingIn,
+  authError,
   onStart,
   onSave,
   onRemove,
+  onRemoveHistory,
   onLogout,
+  onGoogle,
+  onAskLogin,
+  onSkipLogin,
 }) {
   const [mode, setMode] = useState('bus')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [busStop, setBusStop] = useState(null)
+  const [busDest, setBusDest] = useState(null)
   const [dest, setDest] = useState(null)
-  const [boardQuery, setBoardQuery] = useState('')
-  const [board, setBoard] = useState(null)
-  const [city, setCity] = useState('')
-  const [district, setDistrict] = useState('')
-  const [dong, setDong] = useState('')
-  const [areaQuery, setAreaQuery] = useState('')
+  const [pickLineId, setPickLineId] = useState('')
+  const [wakeBefore, setWakeBefore] = useState(1)
+  const [routeQuery, setRouteQuery] = useState('')
+  const [routeHits, setRouteHits] = useState([])
+  const [busRoute, setBusRoute] = useState(null)
+  const [routeStopQuery, setRouteStopQuery] = useState('')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [toast, setToast] = useState('')
+  const loginCardRef = useRef(null)
 
-  const line = dest ? getLine(dest.lineId) : null
-  const boardOptions = useMemo(() => {
-    if (!line) return []
-    const q = boardQuery.trim()
-    return line.stations.filter((s) => !q || s.name.includes(q)).slice(0, 20)
-  }, [line, boardQuery])
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(''), 3200)
+    return () => clearTimeout(timer)
+  }, [toast])
 
-  const hops =
-    dest && board && line ? remainingStops(line, board.name, dest.name) : null
+  const lineStations = pickLineId ? listStationsOnLine(pickLineId) : []
+
+  const routeStops = useMemo(() => {
+    if (!busRoute) return []
+    return listStopsOnRoute(busRoute.routeId, routeStopQuery)
+  }, [busRoute, routeStopQuery])
 
   const destination = useMemo(() => {
-    if (mode === 'bus' && busStop) {
+    if (mode === 'bus' && busDest && busRoute) {
+      const routeName = busRoute.number
+      const label = `${routeName} · ${busDest.name}`
       return {
         mode: 'bus',
-        name: busStop.name,
-        lat: busStop.lat,
-        lng: busStop.lng,
-        label: busStop.name,
+        name: busDest.name,
+        destName: busDest.name.slice(0, 40),
+        destId: busDest.id,
+        lat: busDest.lat,
+        lng: busDest.lng,
+        wakeBefore,
+        routeId: busRoute.routeId,
+        routeName: routeName.slice(0, 40),
+        label: label.slice(0, 80),
       }
     }
-    if (mode === 'subway' && dest && board && hops >= 1) {
+    if (mode === 'subway' && dest) {
+      const label = `${dest.name} (${dest.lineName})`
       return {
         mode: 'subway',
         name: dest.name,
+        destName: dest.name.slice(0, 40),
         lineId: dest.lineId,
         lineName: dest.lineName,
-        boardName: board.name,
-        destName: dest.name,
         lat: dest.lat,
         lng: dest.lng,
-        hops,
-        label: `${board.name} → ${dest.name} (${dest.lineName})`,
+        wakeBefore,
+        label: label.length > 80 ? dest.name : label,
       }
     }
     return null
-  }, [mode, busStop, dest, board, hops])
+  }, [mode, busDest, dest, wakeBefore, busRoute])
 
   useEffect(() => {
     setResults([])
     setError('')
     setQuery('')
-    setBusStop(null)
+    setBusDest(null)
     setDest(null)
-    setBoard(null)
-    setBoardQuery('')
-    setCity('')
-    setDistrict('')
-    setDong('')
-    setAreaQuery('')
+    setPickLineId('')
+    setWakeBefore(1)
+    setRouteQuery('')
+    setRouteHits([])
+    setBusRoute(null)
+    setRouteStopQuery('')
   }, [mode])
-
-  const regions = listRegions()
-  const districts = city ? listDistricts(city) : []
-  const dongs = city && district ? listDongs(city, district) : []
-  const showDong = dongs.some((item) => item !== '전체')
-
-  useEffect(() => {
-    if (mode !== 'bus' || !city || !district) return
-    if (showDong && !dong) {
-      setResults([])
-      return
-    }
-    const list = listStopsByArea({
-      city,
-      district,
-      dong: showDong ? dong : '전체',
-      keyword: areaQuery,
-    })
-    setResults(list)
-    if (list.length === 0) setError('이 지역에 정류장이 없습니다.')
-    else setError('')
-  }, [mode, city, district, dong, areaQuery, showDong])
-
-  async function runBusSearch(e) {
-    e?.preventDefault()
-    if (!query.trim()) return
-    setLoading(true)
-    setError('')
-    try {
-      const list = await searchBusStops(query)
-      setResults(list)
-      if (list.length === 0) setError('정류장이 없습니다. 다른 이름으로 찾아 보세요.')
-    } catch {
-      setError('정류장 검색에 실패했습니다. 잠시 후 다시 시도해 주세요.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function runNearby() {
-    setLoading(true)
-    setError('')
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const list = await nearbyBusStops(pos.coords.latitude, pos.coords.longitude)
-          setResults(list)
-          if (list.length === 0) setError('근처에 정류장이 없습니다.')
-        } catch {
-          setError('근처 정류장을 찾지 못했습니다.')
-        } finally {
-          setLoading(false)
-        }
-      },
-      () => {
-        setLoading(false)
-        setError('위치 권한이 필요합니다.')
-      },
-      { enableHighAccuracy: true, timeout: 8000 },
-    )
-  }
 
   function runSubwaySearch(e) {
     e?.preventDefault()
@@ -151,41 +107,96 @@ export default function DestinationScreen({
     else setError('')
   }
 
+  function runRouteSearch(e) {
+    e?.preventDefault()
+    if (!routeQuery.trim()) return
+    const list = searchBusRoutes(routeQuery)
+    setRouteHits(list)
+    setBusRoute(null)
+    setBusDest(null)
+    setRouteStopQuery('')
+    if (list.length === 0) setError('버스 번호가 없습니다. 번호를 다시 확인해 보세요.')
+    else setError('')
+  }
+
+  function pickRoute(item) {
+    setBusRoute(getBusRoute(item.routeId) || item)
+    setBusDest(null)
+    setRouteStopQuery('')
+    setError('')
+  }
+
+  function sameStop(a, b) {
+    if (!a || !b) return false
+    if (a.id != null && b.id != null) return a.id === b.id
+    return a.name === b.name && a.lat === b.lat
+  }
+
+  function requestSave(placeName) {
+    if (!destination) return
+    onSave({ ...destination, name: placeName })
+    if (!user) {
+      setToast(`${placeName}로 저장하려면 Google 로그인이 필요해요`)
+      loginCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    setToast(`${placeName}로 저장했어요`)
+  }
+
+  const selected = mode === 'bus' ? busDest : dest
+
   return (
+    <div className={user ? 'home-shell' : undefined}>
+      {user && (
+        <HistorySidebar
+          open={sidebarOpen}
+          places={places}
+          history={history}
+          onStart={(place) => {
+            setSidebarOpen(false)
+            onStart(place)
+          }}
+          onRemovePlace={onRemove}
+          onRemoveHistory={onRemoveHistory}
+          onClose={() => setSidebarOpen(false)}
+        />
+      )}
     <main className="screen">
       <header className="top">
-        <p className="eyebrow">편히자</p>
-        <h1>내릴 곳</h1>
-        <p className="lead">버스나 지하철을 고르고, 내릴 곳만 찾으면 됩니다.</p>
+        <h1 className="brand">편히자</h1>
+        <p className="lead">내릴 곳을 고르고, 몇 정거장 전에 깨울지 정하세요.</p>
         <div className="user-row">
-          <span>{user?.displayName || user?.email || '로그인됨'}</span>
-          <button type="button" className="ghost small" onClick={onLogout}>
-            로그아웃
-          </button>
+          {user && (
+            <button
+              type="button"
+              className="ghost small menu-btn"
+              onClick={() => setSidebarOpen((open) => !open)}
+            >
+              {sidebarOpen ? '닫기' : '내 정류장'}
+            </button>
+          )}
+          {user ? (
+            <>
+              <span>{user.displayName || user.email}</span>
+              <button type="button" className="ghost small" onClick={onLogout}>
+                로그아웃
+              </button>
+            </>
+          ) : null}
         </div>
       </header>
 
-      {places.length > 0 && (
-        <section className="block">
-          <h2>자주 가는 곳</h2>
-          <div className="chips">
-            {places.map((place) => (
-              <div className="chip-row" key={place.name}>
-                <button type="button" className="chip primary" onClick={() => onStart(place)}>
-                  {place.name}
-                  <span>{place.label}</span>
-                </button>
-                <button
-                  type="button"
-                  className="ghost small"
-                  onClick={() => onRemove(place.name)}
-                >
-                  삭제
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
+      {!user && (
+        <div ref={loginCardRef}>
+          <LoginScreen
+            compact
+            highlight={needLogin}
+            onGoogle={onGoogle}
+            loading={signingIn}
+            error={authError}
+            onSkip={needLogin ? onSkipLogin : undefined}
+          />
+        </div>
       )}
 
       <div className="tabs">
@@ -205,127 +216,142 @@ export default function DestinationScreen({
         </button>
       </div>
 
-      <form
-        className="search"
-        onSubmit={mode === 'bus' ? runBusSearch : runSubwaySearch}
-      >
-        <label>
-          {mode === 'bus' ? '정류장 이름' : '내릴 역 이름'}
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={mode === 'bus' ? '예: 동대입구' : '예: 동대입구'}
-            autoComplete="off"
-          />
-        </label>
-        <button type="submit" className="primary" disabled={loading}>
-          {loading ? '찾는 중…' : '검색'}
-        </button>
-      </form>
-
       {mode === 'bus' && (
+        <section className="block picks">
+          <h2>버스 번호</h2>
+          <form className="search" onSubmit={runRouteSearch}>
+            <input
+              value={routeQuery}
+              onChange={(e) => setRouteQuery(e.target.value)}
+              placeholder="예: 151, 01A, 96-1"
+              autoComplete="off"
+            />
+            <button type="submit" className="primary">
+              노선 찾기
+            </button>
+          </form>
+          {routeHits.length > 0 && (
+            <ul className="list">
+              {routeHits.map((item) => (
+                <li key={item.routeId}>
+                  <button
+                    type="button"
+                    className={busRoute?.routeId === item.routeId ? 'row on' : 'row'}
+                    onClick={() => pickRoute(item)}
+                  >
+                    <strong>{item.number}</strong>
+                    <span>
+                      {item.city} · {item.stopCount}정류장
+                      {item.startName && item.endName ? ` · ${item.startName} → ${item.endName}` : ''}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {busRoute && (
+            <>
+              <h2>{busRoute.number} 내릴 정류장</h2>
+              <input
+                value={routeStopQuery}
+                onChange={(e) => setRouteStopQuery(e.target.value)}
+                placeholder="이 노선에서 이름 찾기"
+                autoComplete="off"
+              />
+              <ul className="list tall">
+                {routeStops.map((item) => (
+                  <li key={`${item.id}-${item.seq}`}>
+                    <button
+                      type="button"
+                      className={sameStop(busDest, item) ? 'row on' : 'row'}
+                      onClick={() => setBusDest(item)}
+                    >
+                      <strong>{item.name}</strong>
+                      <span>
+                        {item.seq}번째
+                        {item.district ? ` · ${item.district}` : ''}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {routeStops.length === 0 && (
+                <p className="hint">이 노선에서 해당 이름의 정류장이 없습니다.</p>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
+      {mode === 'subway' && (
         <>
+          <form className="search" onSubmit={runSubwaySearch}>
+            <label>
+              내릴 역 이름
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="예: 동대입구"
+                autoComplete="off"
+              />
+            </label>
+            <button type="submit" className="primary">
+              검색
+            </button>
+          </form>
           <section className="block picks">
-            <h2>지역으로 고르기</h2>
+            <h2>호선으로 고르기</h2>
             <select
-              value={city}
+              value={pickLineId}
               onChange={(e) => {
-                setCity(e.target.value)
-                setDistrict('')
-                setDong('')
-                setAreaQuery('')
-                setBusStop(null)
+                setPickLineId(e.target.value)
+                setDest(null)
+                setResults([])
+                setError('')
+              }}
+            >
+              <option value="">호선 선택</option>
+              {listLines().map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={dest && dest.lineId === pickLineId ? dest.name : ''}
+              disabled={!pickLineId}
+              onChange={(e) => {
+                const next = lineStations.find((st) => st.name === e.target.value)
+                setDest(next || null)
                 setResults([])
               }}
             >
-              <option value="">시 선택</option>
-              {regions.map((item) => (
-                <option key={item} value={item}>
-                  {item}
+              <option value="">내릴 역 선택</option>
+              {lineStations.map((st) => (
+                <option key={st.name} value={st.name}>
+                  {st.name}
                 </option>
               ))}
             </select>
-            <select
-              value={district}
-              disabled={!city}
-              onChange={(e) => {
-                setDistrict(e.target.value)
-                setDong('')
-                setAreaQuery('')
-                setBusStop(null)
-              }}
-            >
-              <option value="">구/시 선택</option>
-              {districts.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-            {showDong && (
-              <select
-                value={dong}
-                disabled={!district}
-                onChange={(e) => {
-                  setDong(e.target.value)
-                  setBusStop(null)
-                }}
-              >
-                <option value="">동 선택</option>
-                {dongs.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            )}
-            {city && district && (!showDong || dong) && (
-              <input
-                value={areaQuery}
-                onChange={(e) => setAreaQuery(e.target.value)}
-                placeholder="이 지역에서 이름 찾기"
-                autoComplete="off"
-              />
-            )}
           </section>
-          <button type="button" className="ghost" onClick={runNearby} disabled={loading}>
-            내 근처 정류장
-          </button>
         </>
       )}
 
       {error && <p className="error">{error}</p>}
 
-      {results.length > 0 && (
+      {mode === 'subway' && results.length > 0 && (
         <ul className="list">
           {results.map((item) => {
-            const selected =
-              mode === 'bus'
-                ? busStop && busStop.lat === item.lat && busStop.name === item.name
-                : dest && dest.name === item.name && dest.lineId === item.lineId
+            const on = dest && dest.name === item.name && dest.lineId === item.lineId
             return (
               <li key={`${item.name}-${item.lat}-${item.lineId || ''}`}>
                 <button
                   type="button"
-                  className={selected ? 'row on' : 'row'}
-                  onClick={() => {
-                    if (mode === 'bus') {
-                      setBusStop(item)
-                    } else {
-                      setDest(item)
-                      setBoard(null)
-                    }
-                  }}
+                  className={on ? 'row on' : 'row'}
+                  onClick={() => setDest(item)}
                 >
                   <strong>{item.name}</strong>
-                  <span>
-                    {item.lineName ||
-                      (item.meters != null
-                        ? `버스 정류장 · ${Math.round(item.meters)}m`
-                        : [item.city, item.district, item.dong !== '전체' ? item.dong : '']
-                            .filter(Boolean)
-                            .join(' ') || '버스 정류장')}
-                  </span>
+                  <span>{item.lineName}</span>
                 </button>
               </li>
             )
@@ -333,36 +359,33 @@ export default function DestinationScreen({
         </ul>
       )}
 
-      {mode === 'subway' && dest && (
-        <section className="block">
-          <h2>지금 타는 역 · {dest.lineName}</h2>
-          <input
-            value={boardQuery}
-            onChange={(e) => setBoardQuery(e.target.value)}
-            placeholder="탑승역 검색"
-            autoComplete="off"
-          />
-          <ul className="list short">
-            {boardOptions.map((st) => (
-              <li key={st.name}>
-                <button
-                  type="button"
-                  className={board?.name === st.name ? 'row on' : 'row'}
-                  onClick={() => setBoard(st)}
-                >
-                  <strong>{st.name}</strong>
-                </button>
-              </li>
-            ))}
-          </ul>
-          {board && hops != null && hops < 1 && (
-            <p className="error">같은 역입니다. 다른 탑승역을 고르세요.</p>
-          )}
-          {board && hops >= 1 && (
-            <p className="hint">{hops}정거장 남음 · 1정거장 전에 깨웁니다.</p>
-          )}
+      {selected && (
+        <section className="block trip">
+          <h2>내릴 곳</h2>
+          <p>
+            <strong>{selected.name}</strong>
+            {mode === 'subway' && dest?.lineName ? ` · ${dest.lineName}` : ''}
+            {mode === 'bus' && busRoute?.number ? ` · ${busRoute.number}` : ''}
+          </p>
+          <p className="hint">{wakeBefore}정거장 전에 깨웁니다.</p>
         </section>
       )}
+
+      <section className="block">
+        <h2>몇 정거장 전에 깨울까요</h2>
+        <div className="wake-picks">
+          {WAKE_CHOICES.map((n) => (
+            <button
+              key={n}
+              type="button"
+              className={wakeBefore === n ? 'chip on' : 'chip'}
+              onClick={() => setWakeBefore(n)}
+            >
+              {n}정거장 전
+            </button>
+          ))}
+        </div>
+      </section>
 
       <div className="actions">
         <button
@@ -378,7 +401,7 @@ export default function DestinationScreen({
             type="button"
             className="ghost"
             disabled={!destination}
-            onClick={() => onSave({ ...destination, name: '학교' })}
+            onClick={() => requestSave('학교')}
           >
             학교로 저장
           </button>
@@ -386,12 +409,26 @@ export default function DestinationScreen({
             type="button"
             className="ghost"
             disabled={!destination}
-            onClick={() => onSave({ ...destination, name: '집' })}
+            onClick={() => requestSave('직장')}
+          >
+            직장으로 저장
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            disabled={!destination}
+            onClick={() => requestSave('집')}
           >
             집으로 저장
           </button>
         </div>
       </div>
+      {toast && (
+        <p className="toast" role="status">
+          {toast}
+        </p>
+      )}
     </main>
+    </div>
   )
 }

@@ -1,20 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
-import LoginScreen from './screens/LoginScreen.jsx'
 import DestinationScreen from './screens/DestinationScreen.jsx'
 import WatchingScreen from './screens/WatchingScreen.jsx'
 import WakeScreen from './screens/WakeScreen.jsx'
 import { createAlarm } from './lib/alarm.js'
 import { googleErrorMessage, signInWithGoogle, signOutUser, watchUser } from './lib/auth.js'
 import { deletePlace, listPlaces, savePlace } from './lib/places.js'
+import { deleteHistory, listHistory, saveHistory } from './lib/history.js'
 import './App.css'
 
 export default function App() {
   const [screen, setScreen] = useState('home')
   const [destination, setDestination] = useState(null)
   const [places, setPlaces] = useState([])
+  const [history, setHistory] = useState([])
   const [user, setUser] = useState(undefined)
   const [authError, setAuthError] = useState('')
   const [signingIn, setSigningIn] = useState(false)
+  const [needLogin, setNeedLogin] = useState(false)
+  const [pendingSave, setPendingSave] = useState(null)
   const alarm = useMemo(() => createAlarm(), [])
 
   useEffect(() => {
@@ -22,17 +25,41 @@ export default function App() {
       setUser(next)
       if (!next) {
         setPlaces([])
-        setScreen('home')
-        setDestination(null)
+        setHistory([])
         return
       }
       try {
-        setPlaces(await listPlaces(next.uid))
+        const [saved, recent] = await Promise.all([listPlaces(next.uid), listHistory(next.uid)])
+        setPlaces(saved)
+        setHistory(recent)
       } catch {
         setPlaces([])
+        setHistory([])
       }
     })
   }, [])
+
+  useEffect(() => {
+    if (user) setNeedLogin(false)
+  }, [user])
+
+  useEffect(() => {
+    if (!user || !pendingSave) return
+    let cancelled = false
+    savePlace(user.uid, pendingSave)
+      .then((list) => {
+        if (!cancelled) {
+          setPlaces(list)
+          setPendingSave(null)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPendingSave(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user, pendingSave])
 
   async function onGoogle() {
     setSigningIn(true)
@@ -46,9 +73,15 @@ export default function App() {
     }
   }
 
-  function start(next) {
+  async function start(next) {
     setDestination(next)
     setScreen('watch')
+    if (!user) return
+    try {
+      setHistory(await saveHistory(user.uid, next))
+    } catch {
+      /* 기록 저장이 실패해도 감시는 계속합니다. */
+    }
   }
 
   function stop() {
@@ -58,13 +91,22 @@ export default function App() {
   }
 
   async function onSave(place) {
-    if (!user) return
+    if (!user) {
+      setPendingSave(place)
+      setNeedLogin(true)
+      return
+    }
     setPlaces(await savePlace(user.uid, place))
   }
 
   async function onRemove(name) {
     if (!user) return
     setPlaces(await deletePlace(user.uid, name))
+  }
+
+  async function onRemoveHistory(id) {
+    if (!user) return
+    setHistory(await deleteHistory(user.uid, id))
   }
 
   if (user === undefined) {
@@ -75,20 +117,27 @@ export default function App() {
     )
   }
 
-  if (!user) {
-    return <LoginScreen onGoogle={onGoogle} loading={signingIn} error={authError} />
-  }
-
   return (
     <>
       {screen === 'home' && (
         <DestinationScreen
           user={user}
           places={places}
+          history={history}
+          needLogin={needLogin}
+          signingIn={signingIn}
+          authError={authError}
           onStart={start}
           onSave={onSave}
           onRemove={onRemove}
+          onRemoveHistory={onRemoveHistory}
           onLogout={signOutUser}
+          onGoogle={onGoogle}
+          onAskLogin={() => setNeedLogin(true)}
+          onSkipLogin={() => {
+            setNeedLogin(false)
+            setPendingSave(null)
+          }}
         />
       )}
       {screen === 'watch' && destination && (

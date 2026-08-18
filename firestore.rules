@@ -1,27 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: users/{uid}/places/{placeId}
-    // Document ID: "학교" or "집"
-    // Fields:
-    //   - uid: string (required, immutable, == auth.uid)
-    //   - name: string (required, "학교" or "집", == placeId)
-    //   - mode: string (required, "bus" or "subway")
-    //   - label: string (required, 1-80 chars)
-    //   - lat: number (required)
-    //   - lng: number (required)
-    //   - lineId: string (optional, subway, <= 20)
-    //   - lineName: string (optional, subway, <= 40)
-    //   - boardName: string (optional, subway, <= 40)
-    //   - destName: string (optional, subway, <= 40)
-    //   - hops: number (optional, subway, 1-200)
-    //   - updatedAt: timestamp (optional)
-    // ===============================================================
-
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -33,19 +12,46 @@ service cloud.firestore {
     function isValidPlace(data) {
       return data.keys().hasOnly([
           'uid', 'name', 'mode', 'label', 'lat', 'lng',
-          'lineId', 'lineName', 'boardName', 'destName', 'hops', 'updatedAt'
+          'lineId', 'lineName', 'destName', 'wakeBefore', 'destId',
+          'boardName', 'hops', 'boardLat', 'boardLng',
+          'routeId', 'routeName', 'boardId', 'updatedAt'
         ]) &&
         data.uid is string && data.uid == request.auth.uid &&
-        data.name is string && data.name in ['학교', '집'] &&
+        data.name is string && data.name in ['학교', '직장', '집'] &&
         data.mode is string && data.mode in ['bus', 'subway'] &&
         data.label is string && data.label.size() >= 1 && data.label.size() <= 80 &&
         data.lat is number && data.lng is number &&
+        data.destName is string && data.destName.size() >= 1 && data.destName.size() <= 40 &&
+        data.wakeBefore is number && data.wakeBefore >= 1 && data.wakeBefore <= 5 &&
+        (!('destId' in data) || data.destId is number) &&
+        (!('routeId' in data) || (data.routeId is string && data.routeId.size() >= 1 && data.routeId.size() <= 20)) &&
+        (!('routeName' in data) || (data.routeName is string && data.routeName.size() >= 1 && data.routeName.size() <= 40)) &&
         (data.mode == 'bus' || (
           data.lineId is string && data.lineId.size() >= 1 && data.lineId.size() <= 20 &&
-          data.lineName is string && data.lineName.size() >= 1 && data.lineName.size() <= 40 &&
-          data.boardName is string && data.boardName.size() >= 1 && data.boardName.size() <= 40 &&
-          data.destName is string && data.destName.size() >= 1 && data.destName.size() <= 40 &&
-          data.hops is number && data.hops >= 1 && data.hops <= 200
+          data.lineName is string && data.lineName.size() >= 1 && data.lineName.size() <= 40
+        ));
+    }
+
+    function isValidHistory(data) {
+      return data.keys().hasOnly([
+          'uid', 'id', 'mode', 'label', 'lat', 'lng',
+          'lineId', 'lineName', 'destName', 'wakeBefore', 'destId',
+          'routeId', 'routeName', 'usedAt'
+        ]) &&
+        data.uid is string && data.uid == request.auth.uid &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 80 &&
+        data.mode is string && data.mode in ['bus', 'subway'] &&
+        data.label is string && data.label.size() >= 1 && data.label.size() <= 80 &&
+        data.lat is number && data.lng is number &&
+        data.destName is string && data.destName.size() >= 1 && data.destName.size() <= 40 &&
+        data.wakeBefore is number && data.wakeBefore >= 1 && data.wakeBefore <= 5 &&
+        data.usedAt is number &&
+        (!('destId' in data) || data.destId is number) &&
+        (!('routeId' in data) || (data.routeId is string && data.routeId.size() >= 1 && data.routeId.size() <= 20)) &&
+        (!('routeName' in data) || (data.routeName is string && data.routeName.size() >= 1 && data.routeName.size() <= 40)) &&
+        (data.mode == 'bus' || (
+          data.lineId is string && data.lineId.size() >= 1 && data.lineId.size() <= 20 &&
+          data.lineName is string && data.lineName.size() >= 1 && data.lineName.size() <= 40
         ));
     }
 
@@ -53,7 +59,7 @@ service cloud.firestore {
       allow read, delete: if isOwner(userId);
 
       allow create: if isOwner(userId) &&
-        placeId in ['학교', '집'] &&
+        placeId in ['학교', '직장', '집'] &&
         isValidPlace(request.resource.data) &&
         request.resource.data.name == placeId;
 
@@ -62,6 +68,20 @@ service cloud.firestore {
         request.resource.data.uid == resource.data.uid &&
         request.resource.data.name == resource.data.name &&
         request.resource.data.name == placeId;
+    }
+
+    match /users/{userId}/history/{itemId} {
+      allow read, delete: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+        isValidHistory(request.resource.data) &&
+        request.resource.data.id == itemId;
+
+      allow update: if isOwner(userId) &&
+        isValidHistory(request.resource.data) &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.id == resource.data.id &&
+        request.resource.data.id == itemId;
     }
   }
 }

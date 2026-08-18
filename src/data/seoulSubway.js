@@ -522,6 +522,19 @@ export function searchStations(keyword) {
   return hits.slice(0, 30)
 }
 
+export function listLines() {
+  return SUBWAY_LINES.map((line) => ({ id: line.id, name: line.name }))
+}
+
+export function listStationsOnLine(lineId, keyword = '') {
+  const line = getLine(lineId)
+  if (!line) return []
+  const q = keyword.trim()
+  return line.stations
+    .filter((st) => !q || st.name.includes(q))
+    .map((st) => ({ ...st, lineId: line.id, lineName: line.name }))
+}
+
 export function getLine(lineId) {
   return SUBWAY_LINES.find((l) => l.id === lineId)
 }
